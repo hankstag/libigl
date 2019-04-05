@@ -8,25 +8,6 @@
 #include "segment_segment_intersect.h"
 #include "orient2D.h"
 
-// assume m,n,p are colinear, check whether p is in range [m,n]
-template <typename Scalar>
-bool on_segment(
-  const Scalar m[2],
-  const Scalar n[2],
-  const Scalar p[2],
-  const Scalar eps
-){
-  // if segment is open, meaning there is a neighborhood (-eps,eps)
-  // s.t. if p is within the neighborhood, it's considered on segment
-
-  // if eps is 0, meaning the segments are closed, e.g., exactly equal 
-  // to end points is considered intersection)
-  return ((p[0] >= std::min(m[0],n[0])-eps) &&
-          (p[0] <= std::max(m[0],n[0])+eps) &&
-          (p[1] >= std::min(m[1],n[1])-eps) &&
-          (p[1] <= std::max(m[1],n[1])+eps));
-}
-
 // https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
 template <typename Scalar>
 IGL_INLINE bool igl::copyleft::cgal::segment_segment_intersect(
@@ -42,6 +23,23 @@ IGL_INLINE bool igl::copyleft::cgal::segment_segment_intersect(
   short t3 = orient2D(a,b,d);
   short t4 = orient2D(a,c,d);
 
+  // assume m,n,p are colinear, check whether p is in range [m,n]
+  auto on_segment = [](
+    const Scalar m[2],
+    const Scalar n[2],
+    const Scalar p[2],
+    const Scalar eps
+  ){
+    // if segment is open, meaning there is a neighborhood (-eps,eps)
+    // s.t. if p is within the neighborhood, it's considered on segment
+    // if eps is 0, meaning the segments are closed, e.g., exactly equal 
+    // to end points is considered intersection)
+      return ((p[0] >= std::min(m[0],n[0])-eps) &&
+              (p[0] <= std::max(m[0],n[0])+eps) &&
+              (p[1] >= std::min(m[1],n[1])-eps) &&
+              (p[1] <= std::max(m[1],n[1])+eps));
+  };
+  
   // colinear case        
   if((t1 == 0 && on_segment(a,b,c,eps)) ||
      (t2 == 0 && on_segment(c,d,b,eps)) ||
