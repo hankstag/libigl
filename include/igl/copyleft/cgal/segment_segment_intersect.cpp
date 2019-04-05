@@ -27,6 +27,7 @@ bool on_segment(
           (p[1] <= std::max(m[1],n[1])+eps));
 }
 
+// https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
 template <typename Scalar>
 IGL_INLINE bool igl::copyleft::cgal::segment_segment_intersect(
   const Scalar a[2], 
