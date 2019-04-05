@@ -72,3 +72,7 @@ IGL_INLINE bool igl::copyleft::cgal::segment_segment_intersect(
   return segment_segment_intersect(a,b,c,d,eps);
 
 }
+
+#ifdef IGL_STATIC_LIBRARY
+template bool igl::copyleft::cgal::segment_segment_intersect<Eigen::Matrix<double, 1, 2, 1, 1, 2> >(Eigen::MatrixBase<Eigen::Matrix<double, 1, 2, 1, 1, 2> > const&, Eigen::MatrixBase<Eigen::Matrix<double, 1, 2, 1, 1, 2> > const&, Eigen::MatrixBase<Eigen::Matrix<double, 1, 2, 1, 1, 2> > const&, Eigen::MatrixBase<Eigen::Matrix<double, 1, 2, 1, 1, 2> > const&, Eigen::Matrix<double, 1, 2, 1, 1, 2>::Scalar);
+#endif
