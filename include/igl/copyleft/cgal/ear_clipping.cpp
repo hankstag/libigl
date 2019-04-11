@@ -6,6 +6,7 @@
 template <typename DerivedP>
 IGL_INLINE bool igl::copyleft::cgal::is_ear(
   const Eigen::MatrixBase<DerivedP>& P,
+  const Eigen::VectorXi& RT,
   const Eigen::VectorXi& L,
   const Eigen::VectorXi& R, 
   const int i
@@ -13,12 +14,10 @@ IGL_INLINE bool igl::copyleft::cgal::is_ear(
   typedef typename DerivedP::Scalar Scalar;
 
   int a = L(i), b = R(i);
+  if(RT(i) != 0 || RT(a) != 0 || RT(b) != 0) return false;
   Scalar A[2] = {P(a, 0), P(a, 1)};
   Scalar B[2] = {P(i, 0), P(i, 1)};
   Scalar C[2] = {P(b, 0), P(b, 1)};
-
-  assert(P.rows()>=3);
-  // if angle ABC is flat or reflex, vertex i is not an ear
   if(igl::copyleft::cgal::orient2D(A, B, C)<=0) return false;
   
   // check if any vertex is lying inside triangle (a,b,i);
@@ -58,7 +57,7 @@ IGL_INLINE void igl::copyleft::cgal::ear_clipping(
 
   // initialize ears
   for(int i=0;i<P.rows();i++){
-    ears(i) = (RT(i)==0) && is_ear(P,L,R,i);
+    ears(i) = is_ear(P,RT,L,R,i);
   }
 
   // clip ears until none left
@@ -82,8 +81,8 @@ IGL_INLINE void igl::copyleft::cgal::ear_clipping(
     ears(e) = 0; // mark vertex e as non-ear
 
     // update neighbor's ear status
-    ears(a) = (RT(a)==0) && is_ear(P,L,R,a);
-    ears(b) = (RT(b)==0) && is_ear(P,L,R,b);
+    ears(a) = is_ear(P,RT,L,R,a);
+    ears(b) = is_ear(P,RT,L,R,b);
     X(e) = 1;
 
     // when only one edge left

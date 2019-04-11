@@ -7,6 +7,7 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "point_inside_polygon.h"
+#include "orient2D.h"
 
 // Ray casting algorithm
 // [https://www.geeksforgeeks.org/how-to-check-if-a-given-point-lies-inside-a-polygon/]
@@ -15,23 +16,15 @@ IGL_INLINE bool igl::copyleft::cgal::point_inside_polygon(
     const Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic>& P,
     const Eigen::Matrix<Scalar,1,2>& q
 ){
-    // There must be at least 3 vertices in polygon[]
-    if (P.rows() < 3)  return false;
-    
-    // pick a far right vertex (outside P)
-    Scalar r = P.col(0).maxCoeff() + 2.0f;
-    Eigen::Matrix<Scalar,1,2> q2(2);
-
-    q2 << r, q(1);
-    int count = 0;
-    for(int i=0;i<P.rows();i++){
-        Eigen::Matrix<Scalar,1,2> a = P.row(i);
-        Eigen::Matrix<Scalar,1,2> b = P.row((i+1)%P.rows());
-        if(segment_segment_intersect(a,b,q,q2,0)){
-            count++;
-        }
-    }
-    return count&1;
+  for(int i=0;i<P.rows();i++){
+    int i_1 = (i+1) % P.rows();
+    double a[2] = {P(i  ,0),P(i  ,1)};
+    double b[2] = {P(i_1,0),P(i_1,1)};
+    double c[2] = {q(0  ,0),q(0  ,1)};
+    if(igl::copyleft::cgal::orient2D(a,b,c)<0)
+      return false;
+  }
+  return true;
 }
 
 #ifdef IGL_STATIC_LIBRARY

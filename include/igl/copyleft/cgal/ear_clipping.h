@@ -22,7 +22,7 @@ namespace igl
       template <typename DerivedP>
       void ear_clipping(
         const Eigen::MatrixBase<DerivedP>& P,
-        const Eigen::VectorXi& RT,	
+        const Eigen::VectorXi& RT,
         Eigen::VectorXi& I,
         Eigen::MatrixXi& eF, // #ear*3 indices of ears
         Eigen::PlainObjectBase<DerivedP>& nP
@@ -31,6 +31,7 @@ namespace igl
       template <typename DerivedP>
       bool is_ear(
         const Eigen::MatrixBase<DerivedP>& P,
+        const Eigen::VectorXi& RT,
         const Eigen::VectorXi& L,
         const Eigen::VectorXi& R, 
         const int i
