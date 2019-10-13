@@ -67,7 +67,7 @@ namespace igl {
   //   previous         #V by 1 list of the previous visited vertices (for each vertex) - result of Dijkstra's algorithm
   //
   // Output:
-  //   path             #P by 1 list of vertex indices in the shortest path from vertex to source
+  //   path             #P by 1 list of vertex indices in the shortest path from source to vertex
   //
   template <typename IndexType, typename DerivedP>
   IGL_INLINE void dijkstra(
@@ -96,6 +96,17 @@ namespace igl {
     const std::vector<std::vector<IndexType> >& VV,
     const IndexType &source,
     const std::set<IndexType> &targets,
+    Eigen::PlainObjectBase<DerivedD> &min_distance,
+    Eigen::PlainObjectBase<DerivedP> &previous);
+
+  template <typename IndexType, typename DerivedV,
+  typename DerivedD, typename DerivedP, typename DerivedW>
+  IGL_INLINE int dijkstra(
+    const Eigen::MatrixBase<DerivedV> &V,
+    const std::vector<std::vector<IndexType> >& VV,
+    const IndexType &source,
+    const std::set<IndexType> &targets,
+    const Eigen::MatrixBase<DerivedW> &W,
     Eigen::PlainObjectBase<DerivedD> &min_distance,
     Eigen::PlainObjectBase<DerivedP> &previous);
 

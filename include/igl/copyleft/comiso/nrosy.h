@@ -35,6 +35,148 @@ namespace igl
     // Outputs:
     //   R       #F by 3 the representative vectors of the interpolated field
     //   S       #V by 1 the singularity index for each vertex (0 = regular)
+    
+    IGL_INLINE void initTP(const Eigen::MatrixXd& V,const Eigen::MatrixXi& F,std::vector<Eigen::MatrixXd>& TP_set);
+    
+    class NRosyField
+    {
+    public:
+      // Init
+      IGL_INLINE NRosyField(const Eigen::MatrixXd& _V, const Eigen::MatrixXi& _F);
+
+      // Generate the N-rosy field
+      // N degree of the rosy field
+      // round separately: round the integer variables one at a time, slower but higher quality
+      IGL_INLINE void solve(const Eigen::VectorXi& p_set, 
+                            const std::vector<bool>& p_fix,
+                            const int N,
+                            const Eigen::VectorXd& pj_rhs,
+                            const bool rounding);
+
+      // Set a hard constraint on fid
+      // fid: face id
+      // v: direction to fix (in 3d)
+      IGL_INLINE void setConstraintHard(int fid, const Eigen::Vector3d& v);
+
+      // Set a soft constraint on fid
+      // fid: face id
+      // w: weight of the soft constraint, clipped between 0 and 1
+      // v: direction to fix (in 3d)
+      IGL_INLINE void setConstraintSoft(int fid, double w, const Eigen::Vector3d& v);
+
+      // Set the ratio between smoothness and soft constraints (0 -> smoothness only, 1 -> soft constr only)
+      IGL_INLINE void setSoftAlpha(double alpha);
+
+      // Reset constraints (at least one constraint must be present or solve will fail)
+      IGL_INLINE void resetConstraints();
+
+      // Return the current field
+      IGL_INLINE Eigen::MatrixXd getFieldPerFace();
+      
+      IGL_INLINE Eigen::MatrixXd getFFieldPerFace();
+
+      // Compute singularity indexes
+      IGL_INLINE void findCones(int N);
+
+      // Return the singularities
+      IGL_INLINE Eigen::VectorXd getSingularityIndexPerVertex();
+      
+      IGL_INLINE Eigen::VectorXd getKappa();
+
+      IGL_INLINE Eigen::VectorXi getPeriodJump();
+      
+      // build constraints on period jumps
+      IGL_INLINE void pjconstraints();
+      IGL_INLINE Eigen::VectorXd getPJRhs();
+      IGL_INLINE void setPJRhs(const Eigen::VectorXd& pj_rhs);
+      
+      // load kappa
+      IGL_INLINE void loadk(const Eigen::VectorXd& kn);
+      
+      // set TP
+      IGL_INLINE void setTP(const std::vector<Eigen::MatrixXd>& TP_set);
+
+    private:
+      // Compute angle differences between reference frames
+      IGL_INLINE void computek();
+
+      // Remove useless matchings
+      IGL_INLINE void reduceSpace();
+
+      // Prepare the system matrix
+      IGL_INLINE void prepareSystemMatrix(int N);
+
+      // Solve with roundings using CoMIso
+      IGL_INLINE void solveRoundings();
+      
+      IGL_INLINE void solveNoRoundings();
+      
+      IGL_INLINE void roundAndFix();
+      IGL_INLINE void roundAndFixToZero();
+
+      // Convert a vector in 3d to an angle wrt the local reference system
+      IGL_INLINE double convert3DtoLocal(unsigned fid, const Eigen::Vector3d& v);
+
+      // Convert an angle wrt the local reference system to a 3d vector
+      IGL_INLINE Eigen::Vector3d convertLocalto3D(unsigned fid, double a);
+
+      // Compute the per vertex angle defect
+      IGL_INLINE Eigen::VectorXd angleDefect();
+
+      // Temporary variable for the field
+      Eigen::VectorXd angles;
+
+      // Hard constraints
+      Eigen::VectorXd hard;
+      std::vector<bool> isHard;
+      
+      // linear system built on period jump constraints
+      Eigen::SparseMatrix<double> C;
+      Eigen::VectorXd C_rhs;
+
+      // Soft constraints
+      Eigen::VectorXd soft;
+      Eigen::VectorXd wSoft;
+      double softAlpha;
+
+      // Face Topology
+      Eigen::MatrixXi TT, TTi;
+
+      // Edge Topology
+      Eigen::MatrixXi EV, FE, EF;
+      std::vector<bool> isBorderEdge;
+
+      // Per Edge information
+      // Angle between two reference frames
+      Eigen::VectorXd k;
+
+      // Jumps
+      Eigen::VectorXi p;
+      std::vector<bool> pFixed;
+      Eigen::VectorXi to_no_bd;
+
+      // Mesh
+      Eigen::MatrixXd V;
+      Eigen::MatrixXi F;
+
+      // Normals per face
+      Eigen::MatrixXd N;
+
+      // Singularity index
+      Eigen::VectorXd singularityIndex;
+
+      // Reference frame per triangle
+      std::vector<Eigen::MatrixXd> TPs;
+
+      // System stuff
+      Eigen::SparseMatrix<double> A;
+      Eigen::VectorXd b;
+      Eigen::VectorXi tag_t;
+      Eigen::VectorXi tag_p;
+      Eigen::VectorXd sol;
+
+    };
+    
     IGL_INLINE void nrosy(
       const Eigen::MatrixXd& V,
       const Eigen::MatrixXi& F,
@@ -58,7 +200,23 @@ namespace igl
      Eigen::MatrixXd& R,
      Eigen::VectorXd& S
       );
-
+      
+    IGL_INLINE void nrosy(
+      const Eigen::MatrixXd& V,
+      const Eigen::MatrixXi& F,
+      const Eigen::VectorXi& b,
+      const Eigen::MatrixXd& bc,
+      const std::vector<Eigen::MatrixXd>& TP_set,
+      Eigen::VectorXi& p_set,
+      const std::vector<bool>& p_fix,
+      const Eigen::VectorXd& kn,
+      const int N,
+      const Eigen::VectorXd& pj_rhs,
+      const bool pj_constraints,
+      Eigen::MatrixXd& R,
+      Eigen::VectorXd& S
+    );
+    
   }
 }
 }
