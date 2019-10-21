@@ -72,7 +72,8 @@ igl::copyleft::comiso::NRosyField::NRosyField(const Eigen::MatrixXd& _V, const E
   assert(V.rows() > 0);
   assert(F.rows() > 0);
 
-
+  setbds();
+  
   // Generate topological relations
   igl::triangle_triangle_adjacency(F,TT,TTi);
   igl::edge_topology(V,F, EV, FE, EF);
@@ -340,6 +341,27 @@ void print_equations( const MatrixT& _B)
   }
 }
 
+void igl::copyleft::comiso::NRosyField::setbds(){
+  is_bd = std::vector<bool>(V.rows(),false);
+  Eigen::VectorXi bd;
+  igl::boundary_loop(F,bd);
+  
+  // for(int id=0;id<bd.rows();id++)
+  //   is_bd[bd(id)] = true;
+  to_no_bd.resize(V.rows());
+  to_no_bd.setConstant(-1);
+  
+  int count = 0;
+  for(int i=0;i<V.rows();i++){
+    if(!is_bd[i]){
+      to_no_bd(i) = count;
+      count++;
+    }
+  }
+  n_no_bd = count;
+}
+
+
 // set up the linear constraints for period jumps
 void igl::copyleft::comiso::NRosyField::pjconstraints(){
   
@@ -348,21 +370,6 @@ void igl::copyleft::comiso::NRosyField::pjconstraints(){
   
   // sum \pij = val
   unsigned int n_var = A.rows();
-  int n_constr = 0;
-  Eigen::VectorXi bd;
-  igl::boundary_loop(F,bd);
-  std::vector<bool> is_bd(V.rows(),false);
-  for(int id=0;id<bd.rows();id++)
-    is_bd[bd(id)] = true;
-  to_no_bd.resize(V.rows());
-  to_no_bd.setConstant(-1);
-  int count = 0;
-  for(int i=0;i<V.rows();i++){
-    if(!is_bd[i]){
-      to_no_bd(i) = count;
-      count++;
-    }
-  }
   std::vector<Triplet<double>> T;
   for(unsigned i=0;i<EV.rows();i++){
     int xid = tag_p[i];
@@ -373,12 +380,12 @@ void igl::copyleft::comiso::NRosyField::pjconstraints(){
         T.push_back(Triplet<double>(to_no_bd(EV(i,1)), xid, -1));
     }
   }
-  C = SparseMatrix<double>(count, n_var);
+  C = SparseMatrix<double>(n_no_bd, n_var);
   C.setFromTriplets(T.begin(), T.end());
   
   
 }
-extern int pick;
+
 void igl::copyleft::comiso::NRosyField::solveRoundings()
 {
   using namespace std;
@@ -872,24 +879,10 @@ Eigen::VectorXd igl::copyleft::comiso::NRosyField::angleDefect()
 // setter
 void igl::copyleft::comiso::NRosyField::setPJRhs(const Eigen::VectorXd& pj_rhs){
   C_rhs = pj_rhs;
-  
-  Eigen::VectorXi bd;
-  igl::boundary_loop(F,bd);
-  std::vector<bool> is_bd(V.rows(),false);
-  for(int id=0;id<bd.rows();id++)
-    is_bd[bd(id)] = true;
-  Eigen::VectorXi to_no_bd(V.rows()); 
-  to_no_bd.setConstant(-1);
-  int count = 0;
-  for(int i=0;i<V.rows();i++){
-    if(!is_bd[i]){
-      to_no_bd(i) = count;
-      count++;
-    }
-  }
-  Eigen::VectorXd C_rhs_nobd(count);
+
+  Eigen::VectorXd C_rhs_nobd(n_no_bd);
   int r = 0;
-  if(count == C_rhs.rows()) return;
+  if(n_no_bd == C_rhs.rows()) return;
   for(int i=0;i<C_rhs.rows();i++){
     if(!is_bd[i]){
       C_rhs_nobd(r) = C_rhs(i);
@@ -902,22 +895,7 @@ void igl::copyleft::comiso::NRosyField::setPJRhs(const Eigen::VectorXd& pj_rhs){
 // getter
 Eigen::VectorXd igl::copyleft::comiso::NRosyField::getPJRhs(){
   findCones(4);
-  // std::cout<<C_rhs<<std::endl;
-  Eigen::VectorXi bd;
-  igl::boundary_loop(F,bd);
-  std::vector<bool> is_bd(V.rows(),false);
-  for(int id=0;id<bd.rows();id++)
-    is_bd[bd(id)] = true;
-  Eigen::VectorXi to_no_bd(V.rows());
-  to_no_bd.setConstant(-1);
-  int count = 0;
-  for(int i=0;i<V.rows();i++){
-    if(!is_bd[i]){
-      to_no_bd(i) = count;
-      count++;
-    }
-  }
-  Eigen::VectorXd C_rhs_nobd(count);
+  Eigen::VectorXd C_rhs_nobd(n_no_bd);
   int r = 0;
   for(int i=0;i<C_rhs.rows();i++){
     if(!is_bd[i]){

@@ -96,6 +96,13 @@ namespace igl
       // set TP
       IGL_INLINE void setTP(const std::vector<Eigen::MatrixXd>& TP_set);
 
+      // set bds
+      IGL_INLINE void setbds();
+      
+      // setup seam info
+      IGL_INLINE void set_seams(const Eigen::MatrixXi& mask){ is_seam = mask; };
+      IGL_INLINE void set_mt(const Eigen::MatrixXi& tt, const Eigen::MatrixXi& tti){mt = tt; mti = tti;};
+
     private:
       // Compute angle differences between reference frames
       IGL_INLINE void computek();
@@ -145,6 +152,8 @@ namespace igl
       // Edge Topology
       Eigen::MatrixXi EV, FE, EF;
       std::vector<bool> isBorderEdge;
+      std::vector<bool> is_bd;
+      int n_no_bd;
 
       // Per Edge information
       // Angle between two reference frames
@@ -174,7 +183,11 @@ namespace igl
       Eigen::VectorXi tag_t;
       Eigen::VectorXi tag_p;
       Eigen::VectorXd sol;
-
+      
+      // Extension data
+      Eigen::MatrixXi is_seam; // dim (nf x 3)
+      Eigen::MatrixXi mt;      // match seams
+      Eigen::MatrixXi mti;     // adjacent triangles info
     };
     
     IGL_INLINE void nrosy(
@@ -189,17 +202,18 @@ namespace igl
       double soft,
       Eigen::MatrixXd& R,
       Eigen::VectorXd& S
-      );
+    );
+    
     //wrapper for the case without soft constraints
     IGL_INLINE void nrosy(
-     const Eigen::MatrixXd& V,
-     const Eigen::MatrixXi& F,
-     const Eigen::VectorXi& b,
-     const Eigen::MatrixXd& bc,
-     int N,
-     Eigen::MatrixXd& R,
-     Eigen::VectorXd& S
-      );
+      const Eigen::MatrixXd& V,
+      const Eigen::MatrixXi& F,
+      const Eigen::VectorXi& b,
+      const Eigen::MatrixXd& bc,
+      int N,
+      Eigen::MatrixXd& R,
+      Eigen::VectorXd& S
+    );
       
     IGL_INLINE void nrosy(
       const Eigen::MatrixXd& V,
