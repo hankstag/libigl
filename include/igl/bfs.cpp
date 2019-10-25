@@ -90,4 +90,5 @@ IGL_INLINE void igl::bfs(
   }
 
 }
-
+template void igl::bfs<std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1> >(std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > const&, unsigned long, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&);
+template void igl::bfs<Eigen::SparseMatrix<bool, 0, int>, int, int>(Eigen::SparseCompressedBase<Eigen::SparseMatrix<bool, 0, int> > const&, unsigned long, std::__1::vector<int, std::__1::allocator<int> >&, std::__1::vector<int, std::__1::allocator<int> >&);
