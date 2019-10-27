@@ -5,8 +5,8 @@
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
-#ifndef IGL_CUT_MESH
-#define IGL_CUT_MESH
+#ifndef IGL_CUT_MESH_H
+#define IGL_CUT_MESH_H
 #include "igl_inline.h"
 
 #include <Eigen/Core>
@@ -16,8 +16,6 @@ namespace igl
   // Given a mesh and a list of edges that are to be cut, the function
   // generates a new disk-topology mesh that has the cuts at its boundary.
   //
-  // Todo: this combinatorial operation should not depend on the vertex
-  // positions V.
   //
   // Known issues: Assumes mesh is edge-manifold.
   //
@@ -33,23 +31,37 @@ namespace igl
   //   Fn  #F by 3 list of the faces of the cut mesh(must be triangles). This
   //     matrix will be similar to the original face matrix except some indices
   //     will be redirected to point to the newly duplicated vertices.
-  //
+  //   I   #V by 1 list of the map between Vn to original V index.
 
-  template <typename DerivedV, typename DerivedF, typename DerivedC>
+  // In place mesh cut
+  template <typename DerivedV, typename DerivedF, typename DerivedC, typename DerivedI>
   IGL_INLINE void cut_mesh(
     Eigen::PlainObjectBase<DerivedV>& V,
     Eigen::PlainObjectBase<DerivedF>& F,
-    const Eigen::MatrixBase<DerivedC>& C
+    const Eigen::MatrixBase<DerivedC>& cuts,
+    Eigen::PlainObjectBase<DerivedI>& I
   );
 
   template <typename DerivedV, typename DerivedF, typename DerivedC>
   IGL_INLINE void cut_mesh(
     const Eigen::MatrixBase<DerivedV>& V,
     const Eigen::MatrixBase<DerivedF>& F,
-    const Eigen::MatrixBase<DerivedC>& C,
+    const Eigen::MatrixBase<DerivedC>& cuts,
     Eigen::PlainObjectBase<DerivedV>& Vn,
     Eigen::PlainObjectBase<DerivedF>& Fn
   );
+
+  template <typename DerivedV, typename DerivedF, typename DerivedC, typename DerivedI>
+  IGL_INLINE void cut_mesh(
+    const Eigen::MatrixBase<DerivedV>& V,
+    const Eigen::MatrixBase<DerivedF>& F,
+    const Eigen::MatrixBase<DerivedC>& cuts,
+    Eigen::PlainObjectBase<DerivedV>& Vn,
+    Eigen::PlainObjectBase<DerivedF>& Fn,
+    Eigen::PlainObjectBase<DerivedI>& I
+  );
+
+
   
 }
 

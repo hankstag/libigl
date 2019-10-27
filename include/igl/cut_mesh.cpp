@@ -8,6 +8,7 @@
 #include <igl/cut_mesh.h>
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/HalfEdgeIterator.h>
+#include <igl/is_border_vertex.h>
 
 // wrapper for input/output style
 template <typename DerivedV, typename DerivedF, typename DerivedC>
@@ -20,52 +21,72 @@ IGL_INLINE void igl::cut_mesh(
 ){
   Vn = V;
   Fn = F;
-  cut_mesh(Vn,Fn,C);
+  typedef typename DerivedF::Scalar Index;
+  Eigen::Matrix<Index,Eigen::Dynamic,1> _I;
+  cut_mesh(Vn,Fn,C,_I);
+}
+
+template <typename DerivedV, typename DerivedF, typename DerivedC, typename DerivedI>
+IGL_INLINE void igl::cut_mesh(
+  const Eigen::MatrixBase<DerivedV>& V,
+  const Eigen::MatrixBase<DerivedF>& F,
+  const Eigen::MatrixBase<DerivedC>& C,
+  Eigen::PlainObjectBase<DerivedV>& Vn,
+  Eigen::PlainObjectBase<DerivedF>& Fn,
+  Eigen::PlainObjectBase<DerivedI>& I
+){
+  Vn = V;
+  Fn = F;
+  cut_mesh(Vn,Fn,C,I);
 }
 
 
-// cut mesh - in place update
-template <typename DerivedV, typename DerivedF, typename DerivedC>
+template <typename DerivedV, typename DerivedF, typename DerivedC, typename DerivedI>
 IGL_INLINE void igl::cut_mesh(
   Eigen::PlainObjectBase<DerivedV>& V,
   Eigen::PlainObjectBase<DerivedF>& F,
-  const Eigen::MatrixBase<DerivedC>& C
+  const Eigen::MatrixBase<DerivedC>& C,
+  Eigen::PlainObjectBase<DerivedI>& I
 ){
 
   typedef typename DerivedF::Scalar Index;
   DerivedF FF, FFi;
-  
   igl::triangle_triangle_adjacency(F,FF,FFi);
-  
-  // target number of occurance of each vertex
-  Eigen::Matrix<Index,Eigen::Dynamic,1> g(V.rows());
-  g.setZero();
-  
-  // current number of occurance of each vertex as the alg proceed
+
+  // store current number of occurance of each vertex as the alg proceed
   Eigen::Matrix<Index,Eigen::Dynamic,1> o(V.rows());
   o.setConstant(1);
   
-  // initialize g
+  // set target number of occurance of each vertex
+  Eigen::Matrix<Index,Eigen::Dynamic,1> g(V.rows());
+  g.setZero();
   for(Index i=0;i<F.rows();i++){
     for(Index k=0;k<3;k++){
       if(C(i,k) == 1){
         Index u = F(i,k);
         Index v = F(i,(k+1)%3);
+        if(FF(i,k) == -1) continue;
         if(u > v) continue; // only compute every (undirected) edge ones
         g(u) += 1;
         g(v) += 1;
       }
     }
   }
+  // add one extra occurance for boundary vertices
+  auto is_border = igl::is_border_vertex(F);
+  for(Index i=0;i<V.rows();i++)
+    if(is_border[i])
+      g(i) += 1;
   
-  Index n_v = V.rows(); // original number of vertices
+  // original number of vertices
+  Index n_v = V.rows(); 
   
-  // estimate number of new vertices 
-  // and resize V
+  // estimate number of new vertices and resize V
   Index n_new = 0;
   for(Index i=0;i<g.rows();i++)
     n_new += ((g(i) > 0) ? g(i)-1 : 0);
   V.conservativeResize(n_v+n_new,Eigen::NoChange);
+  I = DerivedI::LinSpaced(V.rows(),0,V.rows());
   
   // pointing to the current bottom of V
   Index pos = n_v;
@@ -75,7 +96,7 @@ IGL_INLINE void igl::cut_mesh(
       if(F(f,k) >= n_v) continue; // ignore new vertices
       if(C(f,k) == 1 && o(v0) != g(v0)){
         igl::HalfEdgeIterator<DerivedF,DerivedF,DerivedF> he(F,FF,FFi,f,k);
-                              
+
         // rotate clock-wise around v0 until hit another cut
         std::vector<Index> fan;
         Index fi = he.Fi();
@@ -86,30 +107,25 @@ IGL_INLINE void igl::cut_mesh(
           he.flipF();
           fi = he.Fi();
           ei = he.Ei();
-        }while(C(fi,ei) == 0);
+        }while(C(fi,ei) == 0 && !he.isBorder());
         
-        // if cuts form a sector/fan
-        if(fi != f){
-          // make a copy
-          // V.conservativeResize(V.rows()+1,V.cols());
-          V.row(pos) << V.row(v0);
-          // V.row(V.rows()-1) << V.row(v0);
-          
-          // add one occurance to v0
-          o(v0) += 1;
-          
-          // replace old v0
-          for(Index f0: fan)
-            for(Index j=0;j<3;j++)
-              if(F(f0,j) == v0)
-                F(f0,j) = pos;
-          
-          // mark cuts as boundary
-          FF(f,k) = -1;
-          FF(fi,ei) = -1;
-          
-          pos++;
-        }
+        // make a copy
+        V.row(pos) << V.row(v0);
+        I(pos) = v0;
+        // add one occurance to v0
+        o(v0) += 1;
+        
+        // replace old v0
+        for(Index f0: fan)
+          for(Index j=0;j<3;j++)
+            if(F(f0,j) == v0)
+              F(f0,j) = pos;
+        
+        // mark cuts as boundary
+        FF(f,k) = -1;
+        FF(fi,ei) = -1;
+        
+        pos++;
       }
     }
   }
