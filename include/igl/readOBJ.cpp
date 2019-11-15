@@ -251,10 +251,10 @@ IGL_INLINE bool igl::readOBJ(
       }else
       {
         //ignore any other lines
-        fprintf(stderr,
-                "Warning: readOBJ() ignored non-comment line %d:\n  %s",
-                line_no,
-                line);
+        // fprintf(stderr,
+        //         "Warning: readOBJ() ignored non-comment line %d:\n  %s",
+        //         line_no,
+        //         line);
       }
     }else
     {
