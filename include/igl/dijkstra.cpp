@@ -8,6 +8,51 @@
 #include "dijkstra.h"
 
 template <typename IndexType, typename DerivedD, typename DerivedP>
+IGL_INLINE int igl::dijkstra_with_len(
+  const IndexType &source,
+  const std::set<IndexType> &targets,
+  const Eigen::SparseMatrix<double>& G,
+  Eigen::PlainObjectBase<DerivedD> &min_distance,
+  Eigen::PlainObjectBase<DerivedP> &previous)
+{
+  int numV = G.size();
+  min_distance.setConstant(numV, 1, std::numeric_limits<typename DerivedD::Scalar>::infinity());
+  min_distance[source] = 0;
+  previous.setConstant(numV, 1, -1);
+  std::set<std::pair<typename DerivedD::Scalar, IndexType> > vertex_queue;
+  vertex_queue.insert(std::make_pair(min_distance[source], source));
+
+  while (!vertex_queue.empty())
+  {
+    typename DerivedD::Scalar dist = vertex_queue.begin()->first;
+    IndexType u = vertex_queue.begin()->second;
+    vertex_queue.erase(vertex_queue.begin());
+
+    if (targets.find(u)!= targets.end())
+      return u;
+
+    // Visit each edge exiting u
+    for (Eigen::SparseMatrix<double>::InnerIterator it(G,u); it; ++it){
+      IndexType v = it.row();
+      // it.row();   // row index
+      // it.col();   // col index (here it is equal to k)
+      typename DerivedD::Scalar distance_through_u = dist + it.value();
+      if (distance_through_u < min_distance[v]) {
+        vertex_queue.erase(std::make_pair(min_distance[v], v));
+
+        min_distance[v] = distance_through_u;
+        previous[v] = u;
+        vertex_queue.insert(std::make_pair(min_distance[v], v));
+
+      }
+
+    }
+  }
+  //we should never get here
+  return -1;
+}
+
+template <typename IndexType, typename DerivedD, typename DerivedP>
 IGL_INLINE int igl::dijkstra(
   const IndexType &source,
   const std::set<IndexType> &targets,
@@ -115,7 +160,7 @@ IGL_INLINE int igl::dijkstra(
     {
       IndexType v = *neighbor_iter;
       double e_len = (V.row(u) - V.row(v)).norm();
-      typename DerivedD::Scalar distance_through_u = dist + (W(v) + W(u)) / 2;
+      typename DerivedD::Scalar distance_through_u = dist + ((W(v) + W(u)) / 2)*e_len;
       if (distance_through_u < min_distance[v]) {
         vertex_queue.erase(std::make_pair(min_distance[v], v));
 
@@ -182,7 +227,7 @@ IGL_INLINE int igl::dijkstra(
 
 template <typename IndexType, typename DerivedV, typename DerivedI,
 typename DerivedD, typename DerivedP>
-IGL_INLINE int igl::dijkstra(
+IGL_INLINE int igl::dijkstra_tree(
   const Eigen::MatrixBase<DerivedV> &V,
   const std::vector<std::vector<IndexType> >& VV,
   const IndexType &source,
@@ -237,5 +282,7 @@ template int igl::dijkstra<int, Eigen::Matrix<double, -1, 1, 0, -1, 1>, Eigen::M
 template void igl::dijkstra<int, Eigen::Matrix<int, -1, 1, 0, -1, 1> >(int const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, std::vector<int, std::allocator<int> >&);
 template int igl::dijkstra<int, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > const&, int const&, std::set<int, std::less<int>, std::allocator<int> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&);
 template int igl::dijkstra<int, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, 1, 0, -1, 1> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > const&, int const&, std::set<int, std::less<int>, std::allocator<int> > const&, Eigen::MatrixBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&);
-template int igl::dijkstra<int, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > const&, int const&, std::set<int, std::less<int>, std::allocator<int> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::MatrixBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> > const&);
+// template int igl::dijkstra<int, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > const&, int const&, std::set<int, std::less<int>, std::allocator<int> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::MatrixBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> > const&);
+template int igl::dijkstra_tree<int, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > const&, int const&, std::set<int, std::less<int>, std::allocator<int> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::MatrixBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> > const&);
+template int igl::dijkstra_with_len<int, Eigen::Matrix<double, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1> >(int const&, std::__1::set<int, std::__1::less<int>, std::__1::allocator<int> > const&, Eigen::SparseMatrix<double, 0, int> const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&);
 #endif

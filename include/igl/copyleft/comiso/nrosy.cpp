@@ -42,7 +42,12 @@ public:
   // Generate the N-rosy field
   // N degree of the rosy field
   // round separately: round the integer variables one at a time, slower but higher quality
-  IGL_INLINE void solve(int N = 4);
+  // IGL_INLINE void solve(int N = 4);
+  IGL_INLINE void solve(const Eigen::VectorXi& p_set, 
+                        const std::vector<bool>& p_fix,
+                        const int N = 4);
+
+  IGL_INLINE void solve(const int N = 4);
 
   // Set a hard constraint on fid
   // fid: face id
@@ -78,6 +83,10 @@ public:
   
   // load precomputed reference frames
   IGL_INLINE void load_TPs(const std::vector<Eigen::MatrixXd>& TP_in);
+
+  IGL_INLINE void loadk(const Eigen::VectorXd& kn);
+
+  IGL_INLINE void setTP(const std::vector<Eigen::MatrixXd>& TP_set);
 
 private:
   // Compute angle differences between reference frames
@@ -152,6 +161,14 @@ private:
 } // NAMESPACE COMISO
 } // NAMESPACE COPYLEFT
 } // NAMESPACE IGL
+
+void igl::copyleft::comiso::NRosyField::loadk(const Eigen::VectorXd& kn){
+  k = kn;
+}
+
+void igl::copyleft::comiso::NRosyField::setTP(const std::vector<Eigen::MatrixXd>& TP_set){
+  TPs = TP_set;
+}
 
 igl::copyleft::comiso::NRosyField::NRosyField(const Eigen::MatrixXd& _V, const Eigen::MatrixXi& _F)
 {
@@ -413,11 +430,34 @@ void igl::copyleft::comiso::NRosyField::solveRoundings()
       p[i] = (int)std::round(x[tag_p[i]]);
 }
 
-
-void igl::copyleft::comiso::NRosyField::solve(const int N)
-{
+void igl::copyleft::comiso::NRosyField::solve(const int N){
   // Reduce the search space by fixing matchings
   reduceSpace();
+
+  // Build the system
+  prepareSystemMatrix(N);
+
+  // Solve with integer roundings
+  solveRoundings();
+
+  // Find the cones
+  findCones(N);
+}
+
+void igl::copyleft::comiso::NRosyField::solve(const Eigen::VectorXi& p_set, 
+                                              const std::vector<bool>& p_fix,
+                                              const int N){
+  // Reduce the search space by fixing matchings
+  bool fixed = false;
+  pFixed = p_fix;
+  for(int i=0;i<pFixed.size();i++){
+    if(pFixed[i])
+      fixed = true;
+  }
+  if(!fixed)
+    reduceSpace();
+  else
+    p = p_set;
 
   // Build the system
   prepareSystemMatrix(N);
@@ -508,9 +548,10 @@ void igl::copyleft::comiso::NRosyField::computek()
     
     V0 = (P*V0.transpose()).transpose();
     
-    assert(V0(0,2) < 1e-10);
-    assert(V0(1,2) < 1e-10);
-    assert(V0(2,2) < 1e-10);
+    // use error rate rather than absolute value?
+    assert(V0(0,2) < 1e-8);
+    assert(V0(1,2) < 1e-8);
+    assert(V0(2,2) < 1e-8);
 
     MatrixXd V1(3,3);
     V1.row(0) = V.row(F(fid1,0)).transpose() -o;
@@ -518,8 +559,8 @@ void igl::copyleft::comiso::NRosyField::computek()
     V1.row(2) = V.row(F(fid1,2)).transpose() -o;
     V1 = (P*V1.transpose()).transpose();
 
-    assert(V1(fid1_vc,2) < 1e-10);
-    assert(V1((fid1_vc+1)%3,2) < 1e-10);
+    assert(V1(fid1_vc,2) < 1e-8);
+    assert(V1((fid1_vc+1)%3,2) < 1e-8);
 
     // compute rotation R such that R * N1 = N0
     // i.e. map both triangles to the same plane
@@ -532,9 +573,9 @@ void igl::copyleft::comiso::NRosyField::computek()
           0, sin(alpha),  cos(alpha);
     V1 = (R*V1.transpose()).transpose();
 
-    assert(V1(0,2) < 1e-10);
-    assert(V1(1,2) < 1e-10);
-    assert(V1(2,2) < 1e-10);
+    assert(V1(0,2) < 1e-8);
+    assert(V1(1,2) < 1e-8);
+    assert(V1(2,2) < 1e-8);
 
     // measure the angle between the reference frames
     // k_ij is the angle between the triangle on the left and the one on the right
@@ -832,7 +873,6 @@ IGL_INLINE void igl::copyleft::comiso::nrosy(
   // overwrite TPs
   if(TP_in.size() == F.rows()){
     solver.load_TPs(TP_in);
-    
   }
 
   // Add hard constraints
@@ -854,4 +894,42 @@ IGL_INLINE void igl::copyleft::comiso::nrosy(
   // Copy the kappa back
   kappa = solver.get_kappas();
   
+}
+
+IGL_INLINE void igl::copyleft::comiso::nrosy(
+                           const Eigen::MatrixXd& V,
+                           const Eigen::MatrixXi& F,
+                           const Eigen::VectorXi& b,
+                           const Eigen::MatrixXd& bc,
+                           const std::vector<Eigen::MatrixXd>& TP_set,
+                           Eigen::VectorXi& p_set,
+                           const std::vector<bool>& p_fix,
+                           const Eigen::VectorXd& kn,
+                           const int N,
+                           Eigen::MatrixXd& R,
+                           Eigen::VectorXd& S
+                           )
+{
+  
+  // Init solver
+  igl::copyleft::comiso::NRosyField solver(V,F);
+  
+  solver.loadk(kn);
+  
+  solver.setTP(TP_set);
+
+  // Add hard constraints
+  for (unsigned i=0; i<b.size();++i)
+    solver.setConstraintHard(b(i),bc.row(i));
+
+  // Interpolate
+  solver.solve(p_set, p_fix, N);
+
+  // Copy the result back
+  R = solver.getFieldPerFace();
+
+  // Extract singularity indices
+  S = solver.getSingularityIndexPerVertex();
+  
+  p_set = solver.get_period_jumps();
 }

@@ -75,6 +75,20 @@ namespace igl
       Eigen::VectorXi& pj,
       Eigen::VectorXd& kappa
     );
+    
+    IGL_INLINE void nrosy(
+      const Eigen::MatrixXd& V,
+      const Eigen::MatrixXi& F,
+      const Eigen::VectorXi& b,
+      const Eigen::MatrixXd& bc,
+      const std::vector<Eigen::MatrixXd>& TP_set,
+      Eigen::VectorXi& p_set,
+      const std::vector<bool>& p_fix,
+      const Eigen::VectorXd& kn,
+      const int N,
+      Eigen::MatrixXd& R,
+      Eigen::VectorXd& S
+    );
   }
 }
 }

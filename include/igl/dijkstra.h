@@ -13,6 +13,7 @@
 #include <Eigen/Core>
 #include <vector>
 #include <set>
+#include <Eigen/Sparse>
 
 namespace igl {
 
@@ -38,6 +39,15 @@ namespace igl {
     const std::vector<double>& weights,
     Eigen::PlainObjectBase<DerivedD> &min_distance,
     Eigen::PlainObjectBase<DerivedP> &previous);
+
+  template <typename IndexType, typename DerivedD, typename DerivedP>
+  IGL_INLINE int dijkstra_with_len(
+    const IndexType &source,
+    const std::set<IndexType> &targets,
+    const Eigen::SparseMatrix<double>& G,
+    Eigen::PlainObjectBase<DerivedD> &min_distance,
+    Eigen::PlainObjectBase<DerivedP> &previous);
+
 
   // Dijkstra's algorithm for shortest paths, with multiple targets.
   // Adapted from http://rosettacode.org/wiki/Dijkstra%27s_algorithm .
@@ -101,7 +111,7 @@ namespace igl {
 
   template <typename IndexType, typename DerivedV, typename DerivedI,
   typename DerivedD, typename DerivedP>
-  IGL_INLINE int dijkstra(
+  IGL_INLINE int dijkstra_tree(
     const Eigen::MatrixBase<DerivedV> &V,
     const std::vector<std::vector<IndexType> >& VV,
     const IndexType &source,
