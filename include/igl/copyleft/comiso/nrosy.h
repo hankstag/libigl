@@ -76,17 +76,20 @@ namespace igl
       Eigen::VectorXd& kappa
     );
     
-    IGL_INLINE void nrosy(
+    // new interface where the field defined
+    // is represented as angles rather than vectors
+      IGL_INLINE void nrosy(
       const Eigen::MatrixXd& V,
       const Eigen::MatrixXi& F,
       const Eigen::VectorXi& b,
-      const Eigen::MatrixXd& bc,
+      const Eigen::VectorXd& bc,
       const std::vector<Eigen::MatrixXd>& TP_set,
-      Eigen::VectorXi& p_set,
-      const std::vector<bool>& p_fix,
-      const Eigen::VectorXd& kn,
+      Eigen::VectorXi& pj,
+      Eigen::VectorXd& kn,
       const int N,
-      Eigen::MatrixXd& R,
+      const std::vector<std::vector<std::pair<int,int>>>& coeff,
+      const Eigen::VectorXd& rhs,
+      Eigen::VectorXd& angles,
       Eigen::VectorXd& S
     );
   }

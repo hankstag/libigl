@@ -7,6 +7,7 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "nrosy.h"
+#include <igl/vertex_triangle_adjacency.h>
 
 #include <igl/copyleft/comiso/nrosy.h>
 #include <igl/triangle_triangle_adjacency.h>
@@ -43,16 +44,17 @@ public:
   // N degree of the rosy field
   // round separately: round the integer variables one at a time, slower but higher quality
   // IGL_INLINE void solve(int N = 4);
-  IGL_INLINE void solve(const Eigen::VectorXi& p_set, 
-                        const std::vector<bool>& p_fix,
-                        const int N = 4);
-
   IGL_INLINE void solve(const int N = 4);
 
   // Set a hard constraint on fid
   // fid: face id
   // v: direction to fix (in 3d)
   IGL_INLINE void setConstraintHard(int fid, const Eigen::Vector3d& v);
+  
+  // Set a hard constraint on fid
+  // fid: face id
+  // angle: angle to fix in TP[fid]
+  IGL_INLINE void setConstraintHard(int fid, double angle);
 
   // Set a soft constraint on fid
   // fid: face id
@@ -68,6 +70,7 @@ public:
 
   // Return the current field
   IGL_INLINE Eigen::MatrixXd getFieldPerFace();
+  IGL_INLINE Eigen::VectorXd getAnglePerFace();
 
   // Compute singularity indexes
   IGL_INLINE void findCones(int N);
@@ -87,6 +90,9 @@ public:
   IGL_INLINE void loadk(const Eigen::VectorXd& kn);
 
   IGL_INLINE void setTP(const std::vector<Eigen::MatrixXd>& TP_set);
+  
+  IGL_INLINE void set_pj_constraints(const std::vector<std::vector<std::pair<int,int>>>& coeff, const Eigen::VectorXd& rhs);
+  IGL_INLINE void build_c();
 
 private:
   // Compute angle differences between reference frames
@@ -155,7 +161,11 @@ private:
   Eigen::VectorXd b;
   Eigen::VectorXi tag_t;
   Eigen::VectorXi tag_p;
-
+  
+  // extra constraints
+  std::vector<std::vector<std::pair<int,int>>> coeff;
+  Eigen::VectorXd rhs;
+  Eigen::SparseMatrix<double> C;
 };
 
 } // NAMESPACE COMISO
@@ -163,11 +173,49 @@ private:
 } // NAMESPACE IGL
 
 void igl::copyleft::comiso::NRosyField::loadk(const Eigen::VectorXd& kn){
-  k = kn;
+  if(kn.rows() > 0)
+    k = kn;
 }
 
 void igl::copyleft::comiso::NRosyField::setTP(const std::vector<Eigen::MatrixXd>& TP_set){
-  TPs = TP_set;
+  if(!TP_set.empty())
+    TPs = TP_set;
+}
+
+void igl::copyleft::comiso::NRosyField::set_pj_constraints(const std::vector<std::vector<std::pair<int,int>>>& coeff_i, const Eigen::VectorXd& rhs_i){
+  coeff = coeff_i;
+  rhs = rhs_i;
+}
+void igl::copyleft::comiso::NRosyField::build_c(){
+  unsigned int n_var = A.rows();
+  std::vector<Eigen::Triplet<double>> T;
+  assert(pFixed.size() == EV.rows());
+  assert(tag_p.size() == EV.rows());
+  for(int row=0;row<coeff.size();row++){
+    auto list = coeff[row];
+    for(auto fe: list){
+      int f = fe.first;
+      int e = fe.second;
+      int u = F(f,e);
+      int v = F(f,(e+1)%3);
+      int eid = FE(f,e);
+      int col = tag_p[FE(f,e)]; // index in EV
+      if(col != -1){
+        if(u == EV(eid,0) && v == EV(eid,1))
+          T.push_back(Eigen::Triplet<double>(row, col, 1));
+        else if(v == EV(eid,0) && u == EV(eid,1))
+          T.push_back(Eigen::Triplet<double>(row, col, -1));
+      }else{ // adjust right hand side
+        if(u == EV(eid,0) && v == EV(eid,1))
+          rhs(row) -= p(eid);
+        else if(v == EV(eid,0) && u == EV(eid,1))
+          rhs(row) += p(eid);
+      }
+    }
+  }
+  C.resize(coeff.size(),n_var);
+  C.setFromTriplets(T.begin(), T.end());
+  
 }
 
 igl::copyleft::comiso::NRosyField::NRosyField(const Eigen::MatrixXd& _V, const Eigen::MatrixXi& _F)
@@ -412,11 +460,34 @@ void igl::copyleft::comiso::NRosyField::solveRoundings()
     if(tag_p[i] != -1)
       ids_to_round.push_back(tag_p[i]);
 
+  #define CONSTRAINTS
+  #ifdef CONSTRAINTS
+  // dim of C -> #V x (#F+#E)
+  build_c();
+  gmm::row_matrix< gmm::wsvector< double > > gmm_C(C.rows(), n+1);
+  if(C.rows() > 0){
+    for(int k=0;k < C.outerSize();k++){
+      for(Eigen::SparseMatrix<double>::InnerIterator it(C,k); it; ++it){
+        gmm_C(it.row(),it.col()) += it.value();
+      }
+    }
+    for(int i=0;i<C.rows();i++){
+      gmm_C(i, n) = -rhs(i);
+    }
+  }
+  #else
   // Empty constraints
-  gmm::row_matrix< gmm::wsvector< double > > gmm_C(0, n);
-
+  gmm::row_matrix< gmm::wsvector< double > > gmm_C(0, n+1);
+  #endif
+  
   COMISO::ConstrainedSolver cs;
   cs.solve(gmm_C, gmm_A, x, gmm_b, ids_to_round, 0.0, false, true);
+
+  Eigen::VectorXd sol(x.size());
+  for(int i=0;i<sol.rows();i++)
+    sol(i) = x[i];
+  std::cout<<"systrem residual = "<<(A*sol-b).norm()<<std::endl;
+  std::cout<<"constraints residual = "<<(C*sol-rhs).norm()<<std::endl;
 
   // Copy the result back
   for(unsigned i=0; i<F.rows(); ++i)
@@ -444,35 +515,16 @@ void igl::copyleft::comiso::NRosyField::solve(const int N){
   findCones(N);
 }
 
-void igl::copyleft::comiso::NRosyField::solve(const Eigen::VectorXi& p_set, 
-                                              const std::vector<bool>& p_fix,
-                                              const int N){
-  // Reduce the search space by fixing matchings
-  bool fixed = false;
-  pFixed = p_fix;
-  for(int i=0;i<pFixed.size();i++){
-    if(pFixed[i])
-      fixed = true;
-  }
-  if(!fixed)
-    reduceSpace();
-  else
-    p = p_set;
-
-  // Build the system
-  prepareSystemMatrix(N);
-
-  // Solve with integer roundings
-  solveRoundings();
-
-  // Find the cones
-  findCones(N);
-}
-
 void igl::copyleft::comiso::NRosyField::setConstraintHard(const int fid, const Eigen::Vector3d& v)
 {
   isHard[fid] = true;
   hard(fid) = convert3DtoLocal(fid, v);
+}
+
+void igl::copyleft::comiso::NRosyField::setConstraintHard(const int fid, const double angle)
+{
+  isHard[fid] = true;
+  hard(fid) = angle;
 }
 
 void igl::copyleft::comiso::NRosyField::setConstraintSoft(const int fid, const double w, const Eigen::Vector3d& v)
@@ -490,6 +542,11 @@ void igl::copyleft::comiso::NRosyField::resetConstraints()
   wSoft = Eigen::VectorXd::Zero(F.rows());
   soft = Eigen::VectorXd::Zero(F.rows());
 }
+
+Eigen::VectorXd igl::copyleft::comiso::NRosyField::getAnglePerFace(){
+  return angles;
+}
+
 
 Eigen::MatrixXd igl::copyleft::comiso::NRosyField::getFieldPerFace()
 {
@@ -590,7 +647,8 @@ void igl::copyleft::comiso::NRosyField::computek()
   
     ref0.normalize();
     ref1.normalize();
-    // log<<ref1<<std::endl;
+    
+    // kappa and pjs stores value for ref1 -> ref0
     double ktemp = atan2(ref0(1),ref0(0)) - atan2(ref1(1),ref1(0));
     
     auto pos_fmod = [](double x, double y){
@@ -897,19 +955,19 @@ IGL_INLINE void igl::copyleft::comiso::nrosy(
 }
 
 IGL_INLINE void igl::copyleft::comiso::nrosy(
-                           const Eigen::MatrixXd& V,
-                           const Eigen::MatrixXi& F,
-                           const Eigen::VectorXi& b,
-                           const Eigen::MatrixXd& bc,
-                           const std::vector<Eigen::MatrixXd>& TP_set,
-                           Eigen::VectorXi& p_set,
-                           const std::vector<bool>& p_fix,
-                           const Eigen::VectorXd& kn,
-                           const int N,
-                           Eigen::MatrixXd& R,
-                           Eigen::VectorXd& S
-                           )
-{
+      const Eigen::MatrixXd& V,
+      const Eigen::MatrixXi& F,
+      const Eigen::VectorXi& b,
+      const Eigen::VectorXd& br,
+      const std::vector<Eigen::MatrixXd>& TP_set,
+      Eigen::VectorXi& pj,
+      Eigen::VectorXd& kn,
+      const int N,
+      const std::vector<std::vector<std::pair<int,int>>>& coeff,
+      const Eigen::VectorXd& rhs,
+      Eigen::VectorXd& angles,
+      Eigen::VectorXd& S
+){
   
   // Init solver
   igl::copyleft::comiso::NRosyField solver(V,F);
@@ -920,16 +978,21 @@ IGL_INLINE void igl::copyleft::comiso::nrosy(
 
   // Add hard constraints
   for (unsigned i=0; i<b.size();++i)
-    solver.setConstraintHard(b(i),bc.row(i));
+    solver.setConstraintHard(b(i),br(i));
+
+  // set pj constraints
+  solver.set_pj_constraints(coeff, rhs);
 
   // Interpolate
-  solver.solve(p_set, p_fix, N);
+  solver.solve(N);
 
   // Copy the result back
-  R = solver.getFieldPerFace();
-
+  angles = solver.getAnglePerFace();
+  
   // Extract singularity indices
   S = solver.getSingularityIndexPerVertex();
   
-  p_set = solver.get_period_jumps();
+  pj = solver.get_period_jumps();
+  
+  kn = solver.get_kappas();
 }
