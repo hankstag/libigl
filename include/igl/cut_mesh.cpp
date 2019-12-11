@@ -62,7 +62,7 @@ IGL_INLINE void igl::cut_mesh(
   g.setZero();
   for(Index i=0;i<F.rows();i++){
     for(Index k=0;k<3;k++){
-      if(C(i,k) == 1){
+      if(C(i,k) != 0){
         Index u = F(i,k);
         Index v = F(i,(k+1)%3);
         if(FF(i,k) == -1) continue;
@@ -94,7 +94,7 @@ IGL_INLINE void igl::cut_mesh(
     for(Index k=0;k<3;k++){
       Index v0 = F(f,k);
       if(F(f,k) >= n_v) continue; // ignore new vertices
-      if(C(f,k) == 1 && o(v0) != g(v0)){
+      if(C(f,k) != 0 && o(v0) != g(v0)){
         igl::HalfEdgeIterator<DerivedF,DerivedF,DerivedF> he(F,FF,FFi,f,k);
 
         // rotate clock-wise around v0 until hit another cut

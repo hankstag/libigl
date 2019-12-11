@@ -84,11 +84,10 @@ namespace igl
       const Eigen::VectorXi& b,
       const Eigen::VectorXd& bc,
       const std::vector<Eigen::MatrixXd>& TP_set,
-      Eigen::VectorXi& pj,
+      const std::vector<bool> p_fix,
+      Eigen::VectorXi& p_set,
       Eigen::VectorXd& kn,
       const int N,
-      const std::vector<std::vector<std::pair<int,int>>>& coeff,
-      const Eigen::VectorXd& rhs,
       Eigen::VectorXd& angles,
       Eigen::VectorXd& S
     );

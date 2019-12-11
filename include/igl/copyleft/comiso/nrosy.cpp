@@ -45,7 +45,10 @@ public:
   // round separately: round the integer variables one at a time, slower but higher quality
   // IGL_INLINE void solve(int N = 4);
   IGL_INLINE void solve(const int N = 4);
-
+  IGL_INLINE void solve(const Eigen::VectorXi& p_set, 
+                        const std::vector<bool>& p_fix,
+                        const int N);
+                        
   // Set a hard constraint on fid
   // fid: face id
   // v: direction to fix (in 3d)
@@ -460,7 +463,7 @@ void igl::copyleft::comiso::NRosyField::solveRoundings()
     if(tag_p[i] != -1)
       ids_to_round.push_back(tag_p[i]);
 
-  #define CONSTRAINTS
+  //#define CONSTRAINTS
   #ifdef CONSTRAINTS
   // dim of C -> #V x (#F+#E)
   build_c();
@@ -487,7 +490,7 @@ void igl::copyleft::comiso::NRosyField::solveRoundings()
   for(int i=0;i<sol.rows();i++)
     sol(i) = x[i];
   std::cout<<"systrem residual = "<<(A*sol-b).norm()<<std::endl;
-  std::cout<<"constraints residual = "<<(C*sol-rhs).norm()<<std::endl;
+  // std::cout<<"constraints residual = "<<(C*sol-rhs).norm()<<std::endl;
 
   // Copy the result back
   for(unsigned i=0; i<F.rows(); ++i)
@@ -514,6 +517,33 @@ void igl::copyleft::comiso::NRosyField::solve(const int N){
   // Find the cones
   findCones(N);
 }
+
+void igl::copyleft::comiso::NRosyField::solve(const Eigen::VectorXi& p_set, 
+                                              const std::vector<bool>& p_fix,
+                                              const int N)
+{
+  // Reduce the search space by fixing matchings
+  bool fixed = false;
+  pFixed = p_fix;
+  for(int i=0;i<pFixed.size();i++){
+    if(pFixed[i])
+      fixed = true;
+  }
+  if(!fixed)
+    reduceSpace();
+  else
+    p = p_set;
+  
+  // Build the system
+  prepareSystemMatrix(N);
+  
+  // Solve with integer roundings
+  solveRoundings();
+
+  // Find the cones
+  findCones(N);
+}
+
 
 void igl::copyleft::comiso::NRosyField::setConstraintHard(const int fid, const Eigen::Vector3d& v)
 {
@@ -960,11 +990,10 @@ IGL_INLINE void igl::copyleft::comiso::nrosy(
       const Eigen::VectorXi& b,
       const Eigen::VectorXd& br,
       const std::vector<Eigen::MatrixXd>& TP_set,
-      Eigen::VectorXi& pj,
+      const std::vector<bool> p_fix,
+      Eigen::VectorXi& p_set,
       Eigen::VectorXd& kn,
       const int N,
-      const std::vector<std::vector<std::pair<int,int>>>& coeff,
-      const Eigen::VectorXd& rhs,
       Eigen::VectorXd& angles,
       Eigen::VectorXd& S
 ){
@@ -980,11 +1009,8 @@ IGL_INLINE void igl::copyleft::comiso::nrosy(
   for (unsigned i=0; i<b.size();++i)
     solver.setConstraintHard(b(i),br(i));
 
-  // set pj constraints
-  solver.set_pj_constraints(coeff, rhs);
-
   // Interpolate
-  solver.solve(N);
+  solver.solve(p_set, p_fix, N);
 
   // Copy the result back
   angles = solver.getAnglePerFace();
@@ -992,7 +1018,7 @@ IGL_INLINE void igl::copyleft::comiso::nrosy(
   // Extract singularity indices
   S = solver.getSingularityIndexPerVertex();
   
-  pj = solver.get_period_jumps();
+  p_set = solver.get_period_jumps();
   
   kn = solver.get_kappas();
 }
