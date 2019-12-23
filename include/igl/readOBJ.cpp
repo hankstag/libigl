@@ -17,6 +17,8 @@
 #include <sstream>
 #include <iterator>
 
+std::vector<std::tuple<int,int,int>> seams;
+
 template <typename Scalar, typename Index>
 IGL_INLINE bool igl::readOBJ(
   const std::string obj_file_name,
@@ -87,6 +89,7 @@ IGL_INLINE bool igl::readOBJ(
   std::string vt("vt");
   std::string f("f");
   std::string tic_tac_toe("#");
+  std::string sm("sm");
 #ifndef IGL_LINE_MAX
 #  define IGL_LINE_MAX 2048
 #endif
@@ -241,8 +244,12 @@ IGL_INLINE bool igl::readOBJ(
           FMwasinit=true;
         }
         sscanf(l, "%s\n", &currentmaterialref);
-      }
-      else if(strlen(type) >= 1 && (type[0] == '#' ||
+      }else if(type == sm){
+        int x[3];
+        int count =
+        sscanf(l,"%d %d %d\n",&x[0],&x[1],&x[2]);
+        seams.push_back(std::make_tuple(x[0]-1,x[1]-1,x[2]));
+      }else if(strlen(type) >= 1 && (type[0] == '#' ||
             type[0] == 'g'  ||
             type[0] == 's'  ||
             strcmp("mtllib",type)==0))

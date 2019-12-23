@@ -132,7 +132,23 @@ namespace igl {
     Eigen::PlainObjectBase<DerivedD> &min_distance,
     Eigen::PlainObjectBase<DerivedP> &previous);
 
+  template <typename IndexType, typename DerivedV, typename DerivedUV,
+  typename DerivedD, typename DerivedP>
+  IGL_INLINE int dijkstra(
+    const Eigen::MatrixBase<DerivedV> &V,
+    const Eigen::MatrixBase<DerivedUV> &uv,
+    std::map<std::pair<IndexType,IndexType>,double>& metric,
+    const std::vector<std::vector<IndexType> >& VV,
+    const IndexType &source,
+    const std::set<IndexType> &targets,
+    Eigen::PlainObjectBase<DerivedD> &min_distance,
+    Eigen::PlainObjectBase<DerivedP> &previous,
+    bool use_uv_metric
+  );
+
 }
+
+
 
 #ifndef IGL_STATIC_LIBRARY
 #include "dijkstra.cpp"
