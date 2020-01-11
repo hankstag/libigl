@@ -146,6 +146,37 @@ namespace igl {
     const Eigen::MatrixBase<DerivedW> &W
   );
 
+  template <typename IndexType, typename DerivedV,
+  typename DerivedD, typename DerivedP, typename DerivedW>
+  IGL_INLINE int dijkstra_m2(
+    const Eigen::MatrixBase<DerivedV> &V,
+    std::map<std::pair<IndexType,IndexType>,double>& metric,
+    const std::vector<std::vector<IndexType> >& VV,
+    const IndexType &source,
+    const std::set<IndexType> &targets,
+    Eigen::PlainObjectBase<DerivedD> &min_distance,
+    Eigen::PlainObjectBase<DerivedP> &previous,
+    bool use_uv_metric,
+    const Eigen::MatrixBase<DerivedW> &W
+  );
+
+  template <typename IndexType, typename DerivedV,
+  typename DerivedD, typename DerivedP, typename DerivedW>
+  IGL_INLINE int dijkstra_m2(
+    const Eigen::MatrixBase<DerivedV> &V,
+    std::map<std::pair<IndexType,IndexType>,double>& metric,
+    const std::vector<std::vector<IndexType> >& VV,
+    const IndexType &source,
+    const std::set<IndexType> &targets,
+    Eigen::PlainObjectBase<DerivedD> &min_distance,
+    Eigen::PlainObjectBase<DerivedP> &previous,
+    bool use_uv_metric,
+    const Eigen::MatrixBase<DerivedW> &W,
+    bool need_cut, 
+    const Eigen::VectorXi& J, 
+    const Eigen::VectorXi& cut_map
+  );
+
 }
 
 
