@@ -176,6 +176,18 @@ namespace igl {
     const Eigen::VectorXi& J, 
     const Eigen::VectorXi& cut_map
   );
+  
+  template <typename IndexType, typename DerivedV, typename DerivedI,
+  typename DerivedD, typename DerivedP>
+  IGL_INLINE int dijkstra_tree(
+    const Eigen::MatrixBase<DerivedV> &V,
+    const std::vector<std::vector<IndexType> >& VV,
+    std::map<std::pair<int,int>, double>& metric,
+    const IndexType &source,
+    const std::set<IndexType> &targets,
+    Eigen::PlainObjectBase<DerivedD> &min_distance,
+    Eigen::PlainObjectBase<DerivedP> &previous,
+    const Eigen::MatrixBase<DerivedI> &is_leaf);
 
 }
 
