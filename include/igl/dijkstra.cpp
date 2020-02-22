@@ -224,15 +224,15 @@ IGL_INLINE int igl::dijkstra_m2(
       IndexType v = *neighbor_iter;
       
       // // check intersection
-      // bool intersect = false;
-      // int p = u;
-      // while(p != -1){
-      //   p = previous[p];
-      //   if(p/2 == v/2){
-      //     intersect = true;
-      //   }
-      // }
-      // if(intersect) continue;
+      bool intersect = false;
+      int p = u;
+      while(p != -1){
+        p = previous[p];
+        if(p/2 == v/2){
+          intersect = true;
+        }
+      }
+      if(intersect) continue;
       
       double e_len = 0;
       if(!use_uv_metric)
