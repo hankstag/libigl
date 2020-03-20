@@ -17,8 +17,6 @@
 #include <sstream>
 #include <iterator>
 
-std::vector<std::tuple<int,int,int>> seams;
-
 template <typename Scalar, typename Index>
 IGL_INLINE bool igl::readOBJ(
   const std::string obj_file_name,
@@ -248,7 +246,6 @@ IGL_INLINE bool igl::readOBJ(
         int x[3];
         int count =
         sscanf(l,"%d %d %d\n",&x[0],&x[1],&x[2]);
-        seams.push_back(std::make_tuple(x[0]-1,x[1]-1,x[2]));
       }else if(strlen(type) >= 1 && (type[0] == '#' ||
             type[0] == 'g'  ||
             type[0] == 's'  ||
