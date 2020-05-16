@@ -11,6 +11,10 @@
 #include "point_inside_convex_polygon.h"
 #include "predicates.h"
 
+//dxy
+#include "segment_segment_intersect.h"
+
+
 template <typename DerivedP, typename DerivedRT,
           typename DerivedF, typename DerivedI>
 IGL_INLINE void igl::predicates::ear_clipping(
@@ -45,17 +49,41 @@ IGL_INLINE void igl::predicates::ear_clipping(
        r == igl::predicates::Orientation::COLLINEAR) return false;
     
     // check if any vertex is lying inside triangle (a,b,i);
+    // Index k=R(b);
+    // while(k!=a){
+    //   Eigen::Matrix<Scalar,-1,2> T(3,2);
+    //   T<<P.row(a),P.row(i),P.row(b);
+    //   Eigen::Matrix<Scalar,1,2> q=P.row(k);
+    //   if(igl::predicates::point_inside_convex_polygon(T,q))
+    //     return false;
+    //   k=R(k);
+    // }
+
+    // Eigen::Matrix<Scalar,1,2> pa=P.row(a).eval();
+    // Eigen::Matrix<Scalar,1,2> pb=P.row(b).eval();
+    // Eigen::Matrix<Scalar,1,2> pi=P.row(i).eval();
+    
+
     Index k=R(b);
+    Index l=R(k);
     while(k!=a){
-      Eigen::Matrix<Scalar,-1,2> T(3,2);
-      T<<P.row(a),P.row(i),P.row(b);
       Eigen::Matrix<Scalar,1,2> q=P.row(k);
-      if(igl::predicates::point_inside_convex_polygon(T,q))
+      Eigen::Matrix<Scalar,1,2> p=P.row(l);
+      if (igl::predicates::segment_segment_intersect(pa,pb,q,p)
+        || igl::predicates::segment_segment_intersect(pa,pi,q,p)
+        || igl::predicates::segment_segment_intersect(pi,pb,q,p)
+        )
+      {
         return false;
-      k=R(k);
+      }
+      k=l;
+      l=R(k);
     }
+
     return true;
   };
+
+
 
   Eigen::Matrix<Index,Eigen::Dynamic,1> L(P.rows());
   Eigen::Matrix<Index,Eigen::Dynamic,1> R(P.rows());

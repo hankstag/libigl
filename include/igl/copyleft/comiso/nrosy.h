@@ -91,6 +91,22 @@ namespace igl
       Eigen::VectorXd& angles,
       Eigen::VectorXd& S
     );
+
+
+    IGL_INLINE void nrosy(
+      const Eigen::MatrixXd& V,
+      const Eigen::MatrixXi& F,
+      const Eigen::VectorXi& b,
+      const Eigen::VectorXd& br,
+      const std::vector<Eigen::MatrixXd>& TP_set,
+      Eigen::VectorXi& pj,
+      Eigen::VectorXd& kn,
+      const int N,
+      const std::vector<std::vector<std::pair<int,int>>>& coeff,
+      const Eigen::VectorXd& rhs,
+      Eigen::VectorXd& angles,
+      Eigen::VectorXd& S
+    );
   }
 }
 }

@@ -463,25 +463,22 @@ void igl::copyleft::comiso::NRosyField::solveRoundings()
     if(tag_p[i] != -1)
       ids_to_round.push_back(tag_p[i]);
 
-  //#define CONSTRAINTS
-  #ifdef CONSTRAINTS
   // dim of C -> #V x (#F+#E)
-  build_c();
-  gmm::row_matrix< gmm::wsvector< double > > gmm_C(C.rows(), n+1);
-  if(C.rows() > 0){
-    for(int k=0;k < C.outerSize();k++){
-      for(Eigen::SparseMatrix<double>::InnerIterator it(C,k); it; ++it){
-        gmm_C(it.row(),it.col()) += it.value();
+  gmm::row_matrix< gmm::wsvector< double > > gmm_C(0, n+1);
+  if(!coeff.empty()){
+    build_c();
+    gmm_C.resize(C.rows(), n+1);
+    if(C.rows() > 0){
+      for(int k=0;k < C.outerSize();k++){
+        for(Eigen::SparseMatrix<double>::InnerIterator it(C,k); it; ++it){
+          gmm_C(it.row(),it.col()) += it.value();
+        }
+      }
+      for(int i=0;i<C.rows();i++){
+        gmm_C(i, n) = -rhs(i);
       }
     }
-    for(int i=0;i<C.rows();i++){
-      gmm_C(i, n) = -rhs(i);
-    }
   }
-  #else
-  // Empty constraints
-  gmm::row_matrix< gmm::wsvector< double > > gmm_C(0, n+1);
-  #endif
   
   COMISO::ConstrainedSolver cs;
   cs.solve(gmm_C, gmm_A, x, gmm_b, ids_to_round, 0.0, false, true);
@@ -490,7 +487,8 @@ void igl::copyleft::comiso::NRosyField::solveRoundings()
   for(int i=0;i<sol.rows();i++)
     sol(i) = x[i];
   std::cout<<"systrem residual = "<<(A*sol-b).norm()<<std::endl;
-  // std::cout<<"constraints residual = "<<(C*sol-rhs).norm()<<std::endl;
+  if(C.rows() != 0)
+    std::cout<<"constraints residual = "<<(C*sol-rhs).norm()<<std::endl;
 
   // Copy the result back
   for(unsigned i=0; i<F.rows(); ++i)
@@ -1019,6 +1017,49 @@ IGL_INLINE void igl::copyleft::comiso::nrosy(
   S = solver.getSingularityIndexPerVertex();
   
   p_set = solver.get_period_jumps();
+  
+  kn = solver.get_kappas();
+}
+
+IGL_INLINE void igl::copyleft::comiso::nrosy(
+      const Eigen::MatrixXd& V,
+      const Eigen::MatrixXi& F,
+      const Eigen::VectorXi& b,
+      const Eigen::VectorXd& br,
+      const std::vector<Eigen::MatrixXd>& TP_set,
+      Eigen::VectorXi& pj,
+      Eigen::VectorXd& kn,
+      const int N,
+      const std::vector<std::vector<std::pair<int,int>>>& coeff,
+      const Eigen::VectorXd& rhs,
+      Eigen::VectorXd& angles,
+      Eigen::VectorXd& S
+){
+  
+  // Init solver
+  igl::copyleft::comiso::NRosyField solver(V,F);
+  
+  solver.loadk(kn);
+  
+  solver.setTP(TP_set);
+
+  // Add hard constraints
+  for (unsigned i=0; i<b.size();++i)
+    solver.setConstraintHard(b(i),br(i));
+
+  // set pj constraints
+  solver.set_pj_constraints(coeff, rhs);
+
+  // Interpolate
+  solver.solve(N);
+
+  // Copy the result back
+  angles = solver.getAnglePerFace();
+  
+  // Extract singularity indices
+  S = solver.getSingularityIndexPerVertex();
+  
+  pj = solver.get_period_jumps();
   
   kn = solver.get_kappas();
 }
