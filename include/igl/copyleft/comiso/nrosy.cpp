@@ -416,6 +416,7 @@ void igl::copyleft::comiso::NRosyField::prepareSystemMatrix(const int N)
 
   if (addSoft)
   {
+    std::cout<<"add soft, factor = "<<softAlpha<<std::endl;
     Eigen::VectorXd bSoft = Eigen::VectorXd::Zero(count_t + count_p);
     std::vector<Eigen::Triplet<double> > TSoft;
     TSoft.reserve(2 * count_p);
@@ -486,7 +487,7 @@ void igl::copyleft::comiso::NRosyField::solveRoundings()
   Eigen::VectorXd sol(x.size());
   for(int i=0;i<sol.rows();i++)
     sol(i) = x[i];
-  std::cout<<"systrem residual = "<<(A*sol-b).norm()<<std::endl;
+  // std::cout<<"systrem residual = "<<(A*sol-b).norm()<<std::endl;
   if(C.rows() != 0)
     std::cout<<"constraints residual = "<<(C*sol-rhs).norm()<<std::endl;
 
@@ -711,7 +712,7 @@ void igl::copyleft::comiso::NRosyField::reduceSpace()
 
   std::queue<int> q;
   for(unsigned int i = 0; i < F.rows(); ++i)
-    if (isHard[i] || wSoft[i] != 0)
+    if (isHard[i])
     {
       q.push(i);
       starting[i] = true;
@@ -980,6 +981,55 @@ IGL_INLINE void igl::copyleft::comiso::nrosy(
   // Copy the kappa back
   kappa = solver.get_kappas();
   
+}
+
+IGL_INLINE void igl::copyleft::comiso::nrosy(
+      const Eigen::MatrixXd& V,
+      const Eigen::MatrixXi& F,
+      const Eigen::VectorXi& b,
+      const Eigen::VectorXd& br,
+      const std::vector<Eigen::MatrixXd>& TP_set,
+      const std::vector<bool> p_fix,
+      const Eigen::VectorXi& b_soft,
+      const Eigen::VectorXd& w_soft,
+      const Eigen::MatrixXd& bc_soft,
+      Eigen::VectorXi& p_set,
+      Eigen::VectorXd& kn,
+      const int N,
+      double soft,
+      Eigen::VectorXd& angles,
+      Eigen::VectorXd& S
+){
+  
+  // Init solver
+  igl::copyleft::comiso::NRosyField solver(V,F);
+  
+  solver.loadk(kn);
+  
+  solver.setTP(TP_set);
+
+  // Add hard constraints
+  for (unsigned i=0; i<b.size();++i)
+    solver.setConstraintHard(b(i),br(i));
+
+  for (unsigned i = 0; i < b_soft.size(); ++i)
+    solver.setConstraintSoft(b_soft(i), w_soft(i), bc_soft.row(i));
+
+  // Set the soft constraints global weight
+  solver.setSoftAlpha(soft);
+
+  // Interpolate
+  solver.solve(p_set, p_fix, N);
+
+  // Copy the result back
+  angles = solver.getAnglePerFace();
+  
+  // Extract singularity indices
+  S = solver.getSingularityIndexPerVertex();
+  
+  p_set = solver.get_period_jumps();
+  
+  kn = solver.get_kappas();
 }
 
 IGL_INLINE void igl::copyleft::comiso::nrosy(

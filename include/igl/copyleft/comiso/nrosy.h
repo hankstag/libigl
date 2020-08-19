@@ -92,6 +92,24 @@ namespace igl
       Eigen::VectorXd& S
     );
 
+    IGL_INLINE void nrosy(
+      const Eigen::MatrixXd& V,
+      const Eigen::MatrixXi& F,
+      const Eigen::VectorXi& b,
+      const Eigen::VectorXd& br,
+      const std::vector<Eigen::MatrixXd>& TP_set,
+      const std::vector<bool> p_fix,
+      const Eigen::VectorXi& b_soft,
+      const Eigen::VectorXd& w_soft,
+      const Eigen::MatrixXd& bc_soft,
+      Eigen::VectorXi& p_set,
+      Eigen::VectorXd& kn,
+      const int N,
+      double soft,
+      Eigen::VectorXd& angles,
+      Eigen::VectorXd& S
+    );
+
 
     IGL_INLINE void nrosy(
       const Eigen::MatrixXd& V,
