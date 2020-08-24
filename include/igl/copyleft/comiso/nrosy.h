@@ -35,6 +35,7 @@ namespace igl
     // Outputs:
     //   R       #F by 3 the representative vectors of the interpolated field
     //   S       #V by 1 the singularity index for each vertex (0 = regular)
+  
     IGL_INLINE void nrosy(
       const Eigen::MatrixXd& V,
       const Eigen::MatrixXi& F,
@@ -43,11 +44,14 @@ namespace igl
       const Eigen::VectorXi& b_soft,
       const Eigen::VectorXd& w_soft,
       const Eigen::MatrixXd& bc_soft,
-      int N,
-      double soft,
-      Eigen::MatrixXd& R,
+      const int N,
+      const double soft,
+      Eigen::VectorXi& pj, 
+      Eigen::VectorXd& kappa,
+      Eigen::VectorXd& theta,
       Eigen::VectorXd& S
-      );
+    );
+
     //wrapper for the case without soft constraints
     IGL_INLINE void nrosy(
      const Eigen::MatrixXd& V,

@@ -885,10 +885,12 @@ IGL_INLINE void igl::copyleft::comiso::nrosy(
   const Eigen::MatrixXd& bc_soft,
   const int N,
   const double soft,
-  Eigen::MatrixXd& R,
+  Eigen::VectorXi& pj,
+  Eigen::VectorXd& kappa,
+  Eigen::VectorXd& theta,
   Eigen::VectorXd& S
-  )
-{
+){
+
   // Init solver
   igl::copyleft::comiso::NRosyField solver(V, F);
 
@@ -907,10 +909,17 @@ IGL_INLINE void igl::copyleft::comiso::nrosy(
   solver.solve(N);
 
   // Copy the result back
-  R = solver.getFieldPerFace();
+  // R = solver.getFieldPerFace();
+  // Copy the pj back
+  pj = solver.get_period_jumps();
+  
+  // Copy the kappa back
+  kappa = solver.get_kappas();
 
   // Extract singularity indices
   S = solver.getSingularityIndexPerVertex();
+
+  theta = solver.getAnglePerFace();
 }
 
 
