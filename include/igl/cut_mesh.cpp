@@ -40,6 +40,7 @@ IGL_INLINE void igl::cut_mesh(
   cut_mesh(Vn,Fn,C,I);
 }
 
+
 template <typename DerivedV, typename DerivedF, typename DerivedC, typename DerivedI>
 IGL_INLINE void igl::cut_mesh(
   Eigen::PlainObjectBase<DerivedV>& V,
@@ -47,51 +48,43 @@ IGL_INLINE void igl::cut_mesh(
   const Eigen::MatrixBase<DerivedC>& C,
   Eigen::PlainObjectBase<DerivedI>& I
 ){
+
   typedef typename DerivedF::Scalar Index;
   DerivedF FF, FFi;
   igl::triangle_triangle_adjacency(F,FF,FFi);
-  igl::cut_mesh(V,F,FF,FFi,C,I);
-}
-
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedFFi, typename DerivedC, typename DerivedI>
-IGL_INLINE void igl::cut_mesh(
-  Eigen::PlainObjectBase<DerivedV>& V,
-  Eigen::PlainObjectBase<DerivedF>& F,
-  Eigen::MatrixBase<DerivedFF>& FF,
-  Eigen::MatrixBase<DerivedFFi>& FFi,
-  const Eigen::MatrixBase<DerivedC>& C,
-  Eigen::PlainObjectBase<DerivedI>& I
-){
-
-  typedef typename DerivedF::Scalar Index;
 
   // store current number of occurance of each vertex as the alg proceed
-  Eigen::Matrix<Index,Eigen::Dynamic,1> occurence(V.rows());
-  occurence.setConstant(1);
+  Eigen::Matrix<Index,Eigen::Dynamic,1> o(V.rows());
+  o.setConstant(1);
   
-  // set eventual number of occurance of each vertex expected
-  Eigen::Matrix<Index,Eigen::Dynamic,1> eventual(V.rows());
-  eventual.setZero();
+  // set target number of occurance of each vertex
+  Eigen::Matrix<Index,Eigen::Dynamic,1> g(V.rows());
+  g.setZero();
   for(Index i=0;i<F.rows();i++){
     for(Index k=0;k<3;k++){
-      Index u = F(i,k);
-      Index v = F(i,(k+1)%3);
-      if(FF(i,k) == -1){ // add one extra occurance for boundary vertices
-        eventual(u) += 1;
-      }else if(C(i,k) == 1 && u < v){ // only compute every (undirected) edge ones
-        eventual(u) += 1;
-        eventual(v) += 1;
+      if(C(i,k) != 0){
+        Index u = F(i,k);
+        Index v = F(i,(k+1)%3);
+        if(FF(i,k) == -1) continue;
+        if(u > v) continue; // only compute every (undirected) edge ones
+        g(u) += 1;
+        g(v) += 1;
       }
     }
   }
+  // add one extra occurance for boundary vertices
+  auto is_border = igl::is_border_vertex(F);
+  for(Index i=0;i<V.rows();i++)
+    if(i < is_border.size() && is_border[i]) /*is_border might only have a sub-range of vector V*/
+      g(i) += 1;
   
   // original number of vertices
   Index n_v = V.rows(); 
   
   // estimate number of new vertices and resize V
   Index n_new = 0;
-  for(Index i=0;i<eventual.rows();i++)
-    n_new += ((eventual(i) > 0) ? eventual(i)-1 : 0);
+  for(Index i=0;i<g.rows();i++)
+    n_new += ((g(i) > 0) ? g(i)-1 : 0);
   V.conservativeResize(n_v+n_new,Eigen::NoChange);
   I = DerivedI::LinSpaced(V.rows(),0,V.rows());
   
@@ -101,7 +94,7 @@ IGL_INLINE void igl::cut_mesh(
     for(Index k=0;k<3;k++){
       Index v0 = F(f,k);
       if(F(f,k) >= n_v) continue; // ignore new vertices
-      if(C(f,k) == 1 && occurence(v0) != eventual(v0)){
+      if(C(f,k) != 0 && o(v0) != g(v0)){
         igl::HalfEdgeIterator<DerivedF,DerivedF,DerivedF> he(F,FF,FFi,f,k);
 
         // rotate clock-wise around v0 until hit another cut
@@ -120,7 +113,7 @@ IGL_INLINE void igl::cut_mesh(
         V.row(pos) << V.row(v0);
         I(pos) = v0;
         // add one occurance to v0
-        occurence(v0) += 1;
+        o(v0) += 1;
         
         // replace old v0
         for(Index f0: fan)
