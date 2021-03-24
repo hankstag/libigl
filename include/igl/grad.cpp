@@ -14,6 +14,8 @@
 #include "volume.h"
 #include "doublearea.h"
 #include "triangle_triangle_adjacency.h"
+#include <iostream>
+
 namespace igl
 {
 
