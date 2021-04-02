@@ -173,7 +173,7 @@ namespace igl
         // area of parallelogram is || v1 x v2 ||
         // This does correct l2 norm of rows, so that it contains #F list of twice
         // triangle areas
-        double dblA = std::sqrt(n.dot(n));
+        typename DerivedV::Scalar dblA = std::sqrt(n.dot(n));
         Eigen::Matrix<typename DerivedV::Scalar, 1, 3> u(0, 0, 1);
         if (!uniform)
         {
@@ -185,8 +185,8 @@ namespace igl
           // Abstract equilateral triangle v1=(0,0), v2=(h,0), v3=(h/2, (sqrt(3)/2)*h)
 
           // get h (by the area of the triangle)
-          // double h = sqrt( (dblA)/sin(igl::PI / 3.0)); // (h^2*sin(60))/2. = Area => h = sqrt(2*Area/sin_60)
-          double h = 1.0;       // modified by leyi
+          // typename DerivedV::Scalar h = sqrt( (dblA)/sin(igl::PI / 3.0)); // (h^2*sin(60))/2. = Area => h = sqrt(2*Area/sin_60)
+          typename DerivedV::Scalar h = 1.0;       // modified by leyi
           dblA = sqrt(3) / 2.0; // added by leyi
 
           Eigen::Matrix<typename DerivedV::Scalar, 3, 1> v1, v2, v3;
@@ -202,8 +202,8 @@ namespace igl
         }
 
         // rotate each vector 90 degrees around normal
-        double norm21 = std::sqrt(v21.dot(v21));
-        double norm13 = std::sqrt(v13.dot(v13));
+        typename DerivedV::Scalar norm21 = std::sqrt(v21.dot(v21));
+        typename DerivedV::Scalar norm13 = std::sqrt(v13.dot(v13));
         eperp21.row(i) = u.cross(v21);
         eperp21.row(i) = eperp21.row(i) / std::sqrt(eperp21.row(i).dot(eperp21.row(i)));
         eperp21.row(i) *= norm21 / dblA;
@@ -256,10 +256,10 @@ template <typename DerivedV, typename DerivedF>
 void igl::grad_plastic(
     const Eigen::MatrixBase<DerivedV> &V,
     const Eigen::MatrixBase<DerivedF> &F,
-    const std::vector<double> &trg,
+    const std::vector<typename DerivedV::Scalar> &trg,
     Eigen::SparseMatrix<typename DerivedV::Scalar> &G)
 {
-  const double eps = 1e-8;
+  const typename DerivedV::Scalar eps = 1e-8;
   // Number of faces
   const int m = F.rows();
   // Number of vertices
@@ -292,7 +292,7 @@ void igl::grad_plastic(
     // area of parallelogram is || v1 x v2 ||
     // This does correct l2 norm of rows, so that it contains #F list of twice
     // triangle areas
-    double dblA = std::sqrt(n.dot(n));
+    typename DerivedV::Scalar dblA = sqrt(n.dot(n));
     Eigen::Matrix<typename DerivedV::Scalar, 1, 3> u(0, 0, 1);
     if (dblA >= eps && trg[i] == 0)
     {
@@ -307,7 +307,7 @@ void igl::grad_plastic(
       // get h (by the area of the triangle)
       // double h = sqrt( (dblA)/sin(igl::PI / 3.0)); // (h^2*sin(60))/2. = Area => h = sqrt(2*Area/sin_60)
 
-      double h;
+      typename DerivedV::Scalar h;
       if (trg[i] != 0)
         h = trg[i]; // modified by leyi
       else          // inspired by https://cims.nyu.edu/gcl/papers/Scaffold-2017.pdf
@@ -331,7 +331,7 @@ void igl::grad_plastic(
     }
     else if (trg[i] == -1) // has two bd edges
     {
-      double l1 = trg[i + m], l2 = trg[i + 2 * m];
+      typename DerivedV::Scalar l1 = trg[i + m], l2 = trg[i + 2 * m];
       dblA = l1 * l2 * sqrt(3) / 2.0;
 
       Eigen::Matrix<typename DerivedV::Scalar, 3, 1> v1, v2, v3;
@@ -362,8 +362,8 @@ void igl::grad_plastic(
     }
 
     // rotate each vector 90 degrees around normal
-    double norm21 = std::sqrt(v21.dot(v21));
-    double norm13 = std::sqrt(v13.dot(v13));
+    typename DerivedV::Scalar norm21 = std::sqrt(v21.dot(v21));
+    typename DerivedV::Scalar norm13 = std::sqrt(v13.dot(v13));
     eperp21.row(i) = u.cross(v21);
     eperp21.row(i) = eperp21.row(i) / std::sqrt(eperp21.row(i).dot(eperp21.row(i)));
     eperp21.row(i) *= norm21 / dblA;

@@ -37,7 +37,7 @@ namespace igl {
   void grad_plastic(
     const Eigen::MatrixBase<DerivedV> &V,
     const Eigen::MatrixBase<DerivedF> &F,
-    const std::vector<double> &trg,
+    const std::vector<typename DerivedV::Scalar> &trg,
     Eigen::SparseMatrix<typename DerivedV::Scalar> &G
   );
   
