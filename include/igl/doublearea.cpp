@@ -34,10 +34,10 @@ IGL_INLINE void igl::doublearea(
     [&V,&F](const int x, const int y, const int f)
     ->typename DerivedV::Scalar
   {
-    auto rx = V(F(f,0),x)-V(F(f,2),x);
-    auto sx = V(F(f,1),x)-V(F(f,2),x);
-    auto ry = V(F(f,0),y)-V(F(f,2),y);
-    auto sy = V(F(f,1),y)-V(F(f,2),y);
+    typename DerivedV::Scalar rx = V(F(f,0),x)-V(F(f,2),x);
+    typename DerivedV::Scalar sx = V(F(f,1),x)-V(F(f,2),x);
+    typename DerivedV::Scalar ry = V(F(f,0),y)-V(F(f,2),y);
+    typename DerivedV::Scalar sy = V(F(f,1),y)-V(F(f,2),y);
     return rx*sy - ry*sx;
   };
 
@@ -219,7 +219,7 @@ IGL_INLINE void igl::doublearea_quad(
   }
 
   // Compute areas
-  Eigen::VectorXd doublearea_tri;
+  Eigen::Matrix<typename DeriveddblA::Scalar, -1, 1> doublearea_tri;
   igl::doublearea(V,Ft,doublearea_tri);
 
   dblA.resize(F.rows(),1);

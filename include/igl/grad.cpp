@@ -76,25 +76,25 @@ namespace igl
         for (int i = 0; i < m; i++)
         {
           N.row(0 * m + i) << 0, 0, 1;
-          double a = sqrt(2) * std::cbrt(3 * vol(i)); // area of a face in a uniform tet with volume = vol(i)
+          typename DerivedV::Scalar a = sqrt(2) * cbrt(3 * vol(i)); // area of a face in a uniform tet with volume = vol(i)
           A(0 * m + i) = (pow(a, 2) * sqrt(3)) / 4.;
         }
         for (int i = 0; i < m; i++)
         {
           N.row(1 * m + i) << 0.8165, -0.4714, -0.3333;
-          double a = sqrt(2) * std::cbrt(3 * vol(i));
+          typename DerivedV::Scalar a = sqrt(2) * cbrt(3 * vol(i));
           A(1 * m + i) = (pow(a, 2) * sqrt(3)) / 4.;
         }
         for (int i = 0; i < m; i++)
         {
           N.row(2 * m + i) << 0, 0.9428, -0.3333;
-          double a = sqrt(2) * std::cbrt(3 * vol(i));
+          typename DerivedV::Scalar a = sqrt(2) * cbrt(3 * vol(i));
           A(2 * m + i) = (pow(a, 2) * sqrt(3)) / 4.;
         }
         for (int i = 0; i < m; i++)
         {
           N.row(3 * m + i) << -0.8165, -0.4714, -0.3333;
-          double a = sqrt(2) * std::cbrt(3 * vol(i));
+          typename DerivedV::Scalar a = sqrt(2) * cbrt(3 * vol(i));
           A(3 * m + i) = (pow(a, 2) * sqrt(3)) / 4.;
         }
       }
@@ -106,7 +106,7 @@ namespace igl
       repmat([T(:,4);T(:,2);T(:,3);T(:,1)],3,1), ...
       repmat(A./(3*repmat(vol,4,1)),3,1).*N(:), ...
       3*m,n);*/
-      std::vector<Triplet<double>> G_t;
+      std::vector<Triplet<typename DerivedV::Scalar>> G_t;
       for (int i = 0; i < 4 * m; i++)
       {
         int T_j; // j indexes : repmat([T(:,4);T(:,2);T(:,3);T(:,1)],3,1)
@@ -128,10 +128,10 @@ namespace igl
         int i_idx = i % m;
         int j_idx = T(i_idx, T_j);
 
-        double val_before_n = A(i) / (3 * vol(i_idx));
-        G_t.push_back(Triplet<double>(0 * m + i_idx, j_idx, val_before_n * N(i, 0)));
-        G_t.push_back(Triplet<double>(1 * m + i_idx, j_idx, val_before_n * N(i, 1)));
-        G_t.push_back(Triplet<double>(2 * m + i_idx, j_idx, val_before_n * N(i, 2)));
+        typename DerivedV::Scalar val_before_n = A(i) / (3 * vol(i_idx));
+        G_t.push_back(Triplet<typename DerivedV::Scalar>(0 * m + i_idx, j_idx, val_before_n * N(i, 0)));
+        G_t.push_back(Triplet<typename DerivedV::Scalar>(1 * m + i_idx, j_idx, val_before_n * N(i, 1)));
+        G_t.push_back(Triplet<typename DerivedV::Scalar>(2 * m + i_idx, j_idx, val_before_n * N(i, 2)));
       }
       G.resize(3 * m, n);
       G.setFromTriplets(G_t.begin(), G_t.end());
@@ -173,7 +173,7 @@ namespace igl
         // area of parallelogram is || v1 x v2 ||
         // This does correct l2 norm of rows, so that it contains #F list of twice
         // triangle areas
-        typename DerivedV::Scalar dblA = std::sqrt(n.dot(n));
+        typename DerivedV::Scalar dblA = sqrt(n.dot(n));
         Eigen::Matrix<typename DerivedV::Scalar, 1, 3> u(0, 0, 1);
         if (!uniform)
         {
@@ -202,13 +202,13 @@ namespace igl
         }
 
         // rotate each vector 90 degrees around normal
-        typename DerivedV::Scalar norm21 = std::sqrt(v21.dot(v21));
-        typename DerivedV::Scalar norm13 = std::sqrt(v13.dot(v13));
+        typename DerivedV::Scalar norm21 = sqrt(v21.dot(v21));
+        typename DerivedV::Scalar norm13 = sqrt(v13.dot(v13));
         eperp21.row(i) = u.cross(v21);
-        eperp21.row(i) = eperp21.row(i) / std::sqrt(eperp21.row(i).dot(eperp21.row(i)));
+        eperp21.row(i) = eperp21.row(i) / sqrt(eperp21.row(i).dot(eperp21.row(i)));
         eperp21.row(i) *= norm21 / dblA;
         eperp13.row(i) = u.cross(v13);
-        eperp13.row(i) = eperp13.row(i) / std::sqrt(eperp13.row(i).dot(eperp13.row(i)));
+        eperp13.row(i) = eperp13.row(i) / sqrt(eperp13.row(i).dot(eperp13.row(i)));
         eperp13.row(i) *= norm13 / dblA;
       }
 
@@ -305,7 +305,7 @@ void igl::grad_plastic(
       // Abstract equilateral triangle v1=(0,0), v2=(h,0), v3=(h/2, (sqrt(3)/2)*h)
 
       // get h (by the area of the triangle)
-      // double h = sqrt( (dblA)/sin(igl::PI / 3.0)); // (h^2*sin(60))/2. = Area => h = sqrt(2*Area/sin_60)
+      // typename DerivedV::Scalar h = sqrt( (dblA)/sin(igl::PI / 3.0)); // (h^2*sin(60))/2. = Area => h = sqrt(2*Area/sin_60)
 
       typename DerivedV::Scalar h;
       if (trg[i] != 0)
@@ -344,7 +344,7 @@ void igl::grad_plastic(
       else if (TT(i, 0) != -1)
       {
         v1 << 0, 0, 0;
-        v2 << std::sqrt(l1 * l1 + l2 * l2 - l1 * l2), 0, 0;
+        v2 << sqrt(l1 * l1 + l2 * l2 - l1 * l2), 0, 0;
         v3 << 0 ,dblA / v2(0), 0;
         v3(0) = sqrt(l2 * l2 - v3(1) * v3(1));
       }
@@ -362,13 +362,13 @@ void igl::grad_plastic(
     }
 
     // rotate each vector 90 degrees around normal
-    typename DerivedV::Scalar norm21 = std::sqrt(v21.dot(v21));
-    typename DerivedV::Scalar norm13 = std::sqrt(v13.dot(v13));
+    typename DerivedV::Scalar norm21 = sqrt(v21.dot(v21));
+    typename DerivedV::Scalar norm13 = sqrt(v13.dot(v13));
     eperp21.row(i) = u.cross(v21);
-    eperp21.row(i) = eperp21.row(i) / std::sqrt(eperp21.row(i).dot(eperp21.row(i)));
+    eperp21.row(i) = eperp21.row(i) / sqrt(eperp21.row(i).dot(eperp21.row(i)));
     eperp21.row(i) *= norm21 / dblA;
     eperp13.row(i) = u.cross(v13);
-    eperp13.row(i) = eperp13.row(i) / std::sqrt(eperp13.row(i).dot(eperp13.row(i)));
+    eperp13.row(i) = eperp13.row(i) / sqrt(eperp13.row(i).dot(eperp13.row(i)));
     eperp13.row(i) *= norm13 / dblA;
   }
 
